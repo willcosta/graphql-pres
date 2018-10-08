@@ -1,4 +1,4 @@
-const { GraphQLServer } = require('graphql-yoga')
+const { GraphQLServer, PubSub } = require('graphql-yoga')
 const axios = require('axios');
 
 const typeDefs = `
@@ -16,6 +16,14 @@ const typeDefs = `
     offer(id: ID): Offer!
   }
 
+  type Mutation {
+      increaseOfferVisits(id: Int!): Boolean
+  }
+
+  type Subscription {
+    whatTimeIsIt: String!
+  }
+
   type Auction{
       id: ID!
       "The name of the Auction"
@@ -27,6 +35,7 @@ const typeDefs = `
   type Offer{
       id: ID!
       lotNumber : Int!
+      visits: Int!
       productShortDesc : String!
       auction : Auction!
       currentMinBidFormatted : String!
@@ -71,8 +80,39 @@ const resolvers = {
                 resolve(res.data.offers);
             })
         });
+    },
+
+    offer : (parent, {id}) => {
+        return new Promise((resolve, reject) => {
+            axios.get(`${BASE_API_URI}/auction-query/lc/offer/${id}`, DEFAULT_HEADERS)
+            .then((res) => {
+                resolve(res.data);
+            })
+        });
     }
     
+  },
+
+  Mutation: {
+      increaseOfferVisits: (parent, {id}) => {
+          return new Promise((resolve, reject) => {
+              axios.post(`${BASE_API_URI}/auction-event/visit/offer/${id}`, {}, DEFAULT_HEADERS)
+              .then((res) => {
+                resolve(true);
+              })
+          })
+      }
+  },
+  
+  Subscription: {
+    whatTimeIsIt: {
+      subscribe: (parent, args, { pubsub }) => {
+        const channel = Math.random().toString(36).substring(2, 15) // random channel name
+        let count = 0
+        setInterval(() => pubsub.publish(channel, { whatTimeIsIt: new Date().toISOString() }), 5000)
+        return pubsub.asyncIterator(channel)
+      },
+    }
   },
 
   Auction: {
@@ -102,6 +142,6 @@ const resolvers = {
 }
 
 }
-
-const server = new GraphQLServer({ typeDefs, resolvers })
-server.start(() => console.log('Server is running on localhost:4000'))
+const pubsub = new PubSub();
+const server = new GraphQLServer({ typeDefs, resolvers, context:{pubsub} });
+server.start(() => console.log('Server is running on localhost:4000'));
