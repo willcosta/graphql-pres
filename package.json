@@ -1,0 +1,14 @@
+{
+  "name": "auction_query_graphql",
+  "version": "1.0.0",
+  "main": "./src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "nodemon ./src/index.js"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "graphql-yoga": "^1.14.12",
+    "nodemon": "^1.18.3"
+  }
+}
